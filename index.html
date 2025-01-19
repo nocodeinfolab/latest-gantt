@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dynamic Gantt Chart</title>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+        google.charts.load('current', { packages: ['gantt'] });
+        google.charts.setOnLoadCallback(drawChart);
+
+        // Utility: Parse query parameters from the URL
+        function getQueryParams() {
+            const params = new URLSearchParams(window.location.search);
+            return Object.fromEntries(params.entries());
+        }
+
+        // Generate Gantt data rows from query parameters
+        function parseGanttData(params) {
+            const labels = params.labels ? params.labels.split(',') : [];
+            const startDates = params.startDates ? params.startDates.split(',') : [];
+            const endDates = params.endDates ? params.endDates.split(',') : [];
+
+            // Ensure all parameters are provided and have equal lengths
+            if (!labels.length || labels.length !== startDates.length || labels.length !== endDates.length) {
+                throw new Error('Mismatched or missing labels, startDates, and endDates.');
+            }
+
+            // Create rows for the Gantt chart
+            const dataRows = labels.map((label, index) => {
+                const startDate = new Date(startDates[index]);
+                const endDate = new Date(endDates[index]);
+
+                if (isNaN(startDate) || isNaN(endDate)) {
+                    throw new Error(`Invalid date format for task: ${label}`);
+                }
+
+                return [
+                    `Task${index + 1}`, // Task ID
+                    label.trim(),       // Task Name
+                    '',                 // Resource (Optional)
+                    startDate,          // Start Date
+                    endDate,            // End Date
+                    null,               // Duration (Auto-calculated)
+                    null,               // Percent Complete (Excluded for now)
+                    null                // Dependencies (Optional)
+                ];
+            });
+
+            return dataRows;
+        }
+
+        function drawChart() {
+            const params = getQueryParams();
+
+            // Validate that required parameters are present
+            if (!params.labels || !params.startDates || !params.endDates) {
+                document.getElementById('gantt_chart').innerHTML =
+                    'Error: Missing required parameters (labels, startDates, endDates).';
+                return;
+            }
+
+            try {
+                const data = new google.visualization.DataTable();
+                data.addColumn('string', 'Task ID');
+                data.addColumn('string', 'Task Name');
+                data.addColumn('string', 'Resource');
+                data.addColumn('date', 'Start Date');
+                data.addColumn('date', 'End Date');
+                data.addColumn('number', 'Duration');
+                data.addColumn('number', 'Percent Complete');
+                data.addColumn('string', 'Dependencies');
+
+                // Add rows parsed from query parameters
+                const dataRows = parseGanttData(params);
+                data.addRows(dataRows);
+
+                const options = {
+                    height: 400,
+                    gantt: {
+                        criticalPathEnabled: true,
+                        criticalPathStyle: {
+                            stroke: '#e64a19',
+                            strokeWidth: 2
+                        }
+                    }
+                };
+
+                const chart = new google.visualization.Gantt(document.getElementById('gantt_chart'));
+                chart.draw(data, options);
+            } catch (error) {
+                document.getElementById('gantt_chart').innerHTML =
+                    'Error generating Gantt chart: ' + error.message;
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="gantt_chart"></div>
+</body>
+</html>
