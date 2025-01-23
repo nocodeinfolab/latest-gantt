@@ -73,8 +73,11 @@
                 const dataRows = parseGanttData(params);
                 data.addRows(dataRows);
 
+                // Dynamically calculate chart height
+                const chartHeight = Math.max(400, 40 * dataRows.length);
+
                 const options = {
-                    height: 400,
+                    height: chartHeight, // Adjust height dynamically
                     gantt: {
                         criticalPathEnabled: true,
                         criticalPathStyle: {
