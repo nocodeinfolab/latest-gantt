@@ -32,7 +32,7 @@
                 "Completed": 100
             };
 
-            // Create rows for the Gantt chart
+            // Create rows for the Gantt chart, including original index for sorting later
             const dataRows = labels.map((label, index) => {
                 const startDate = new Date(startDates[index]);
                 const endDate = new Date(endDates[index]);
@@ -43,20 +43,27 @@
                     throw new Error(`Invalid date format for task: ${label}`);
                 }
 
-                return [
-                    `Task${index + 1}`,         // Task ID
-                    label.trim(),               // Task Name
-                    '',                         // Resource (Optional)
-                    startDate,                  // Start Date
-                    endDate,                    // End Date
-                    null,                       // Duration (Auto-calculated)
-                    percentComplete,            // Percent Complete (Mapped from status)
-                    null,                       // Dependencies (Optional)
-                    completionStatus            // Custom Status Column (Text)
-                ];
+                return {
+                    index: index,  // Store the original index to maintain the order
+                    row: [
+                        `Task${index + 1}`,         // Task ID
+                        label.trim(),               // Task Name
+                        '',                         // Resource (Optional)
+                        startDate,                  // Start Date
+                        endDate,                    // End Date
+                        null,                       // Duration (Auto-calculated)
+                        percentComplete,            // Percent Complete (Mapped from status)
+                        null,                       // Dependencies (Optional)
+                        completionStatus            // Custom Status Column (Text)
+                    ]
+                };
             });
 
-            return dataRows;
+            // Sort the rows based on the original index to maintain the order
+            dataRows.sort((a, b) => a.index - b.index);
+
+            // Return only the row data (sorted)
+            return dataRows.map(data => data.row);
         }
 
         function drawChart() {
