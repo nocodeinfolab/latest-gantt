@@ -32,12 +32,20 @@
                 "Completed": 100
             };
 
+            // Map completion statuses to colors
+            const statusToColor = {
+                "Not Started": '#FF0000', // Red
+                "In Progress": '#FFFF00', // Yellow
+                "Completed": '#008000'    // Green
+            };
+
             // Create rows for the Gantt chart, including original index for sorting later
             const dataRows = labels.map((label, index) => {
                 const startDate = new Date(startDates[index]);
                 const endDate = new Date(endDates[index]);
                 const completionStatus = completionStatuses[index].trim();
                 const percentComplete = statusToPercent[completionStatus] !== undefined ? statusToPercent[completionStatus] : 0;
+                const color = statusToColor[completionStatus] || '#FFFFFF'; // Default to white if status is unknown
 
                 if (isNaN(startDate) || isNaN(endDate)) {
                     throw new Error(`Invalid date format for task: ${label}`);
@@ -54,7 +62,8 @@
                         null,                       // Duration (Auto-calculated)
                         percentComplete,            // Percent Complete (Mapped from status)
                         null,                       // Dependencies (Optional)
-                        completionStatus            // Custom Status Column (Text)
+                        completionStatus,           // Custom Status Column (Text)
+                        color                       // Color Column based on status
                     ]
                 };
             });
@@ -87,6 +96,7 @@
                 data.addColumn('number', 'Percent Complete');
                 data.addColumn('string', 'Dependencies');
                 data.addColumn('string', 'Status'); // Custom Status Column for displaying text
+                data.addColumn('string', 'Color');  // New column for task color
 
                 // Add rows parsed from query parameters
                 const dataRows = parseGanttData(params);
@@ -107,7 +117,9 @@
                         tooltip: { 
                             isHtml: true, 
                             trigger: 'focus' 
-                        }
+                        },
+                        // Custom task bar color based on the 'Color' column
+                        barHeight: 30
                     }
                 };
 
