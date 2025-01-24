@@ -18,70 +18,43 @@
             const labels = params.labels ? params.labels.split(',') : [];
             const startDates = params.startDates ? params.startDates.split(',') : [];
             const endDates = params.endDates ? params.endDates.split(',') : [];
-            const completionStatuses = params.completionStatuses ? params.completionStatuses.split(',') : [];
 
             // Ensure all parameters are provided and have equal lengths
-            if (!labels.length || labels.length !== startDates.length || labels.length !== endDates.length || labels.length !== completionStatuses.length) {
-                throw new Error('Mismatched or missing labels, startDates, endDates, or completionStatuses.');
+            if (!labels.length || labels.length !== startDates.length || labels.length !== endDates.length) {
+                throw new Error('Mismatched or missing labels, startDates, and endDates.');
             }
 
-            // Map completion statuses to percentages (for Gantt chart) and text
-            const statusToPercent = {
-                "Not Started": 0,
-                "In Progress": 50,
-                "Completed": 100
-            };
-
-            // Map completion statuses to colors
-            const statusToColor = {
-                "Not Started": '#FF0000', // Red
-                "In Progress": '#FFFF00', // Yellow
-                "Completed": '#008000'    // Green
-            };
-
-            // Create rows for the Gantt chart, including original index for sorting later
+            // Create rows for the Gantt chart
             const dataRows = labels.map((label, index) => {
                 const startDate = new Date(startDates[index]);
                 const endDate = new Date(endDates[index]);
-                const completionStatus = completionStatuses[index].trim();
-                const percentComplete = statusToPercent[completionStatus] !== undefined ? statusToPercent[completionStatus] : 0;
-                const color = statusToColor[completionStatus] || '#FFFFFF'; // Default to white if status is unknown
 
                 if (isNaN(startDate) || isNaN(endDate)) {
                     throw new Error(`Invalid date format for task: ${label}`);
                 }
 
-                return {
-                    index: index,  // Store the original index to maintain the order
-                    row: [
-                        `Task${index + 1}`,         // Task ID
-                        label.trim(),               // Task Name
-                        '',                         // Resource (Optional)
-                        startDate,                  // Start Date
-                        endDate,                    // End Date
-                        null,                       // Duration (Auto-calculated)
-                        percentComplete,            // Percent Complete (Mapped from status)
-                        null,                       // Dependencies (Optional)
-                        completionStatus,           // Custom Status Column (Text)
-                        color                       // Color Column based on status
-                    ]
-                };
+                return [
+                    `Task${index + 1}`, // Task ID
+                    label.trim(),       // Task Name
+                    '',                 // Resource (Optional)
+                    startDate,          // Start Date
+                    endDate,            // End Date
+                    null,               // Duration (Auto-calculated)
+                    null,               // Percent Complete (Excluded for now)
+                    null                // Dependencies (Optional)
+                ];
             });
 
-            // Sort the rows based on the original index to maintain the order
-            dataRows.sort((a, b) => a.index - b.index);
-
-            // Return only the row data (sorted)
-            return dataRows.map(data => data.row);
+            return dataRows;
         }
 
         function drawChart() {
             const params = getQueryParams();
 
             // Validate that required parameters are present
-            if (!params.labels || !params.startDates || !params.endDates || !params.completionStatuses) {
+            if (!params.labels || !params.startDates || !params.endDates) {
                 document.getElementById('gantt_chart').innerHTML =
-                    'Error: Missing required parameters (labels, startDates, endDates, completionStatuses).';
+                    'Error: Missing required parameters (labels, startDates, endDates).';
                 return;
             }
 
@@ -95,8 +68,6 @@
                 data.addColumn('number', 'Duration');
                 data.addColumn('number', 'Percent Complete');
                 data.addColumn('string', 'Dependencies');
-                data.addColumn('string', 'Status'); // Custom Status Column for displaying text
-                data.addColumn('string', 'Color');  // New column for task color
 
                 // Add rows parsed from query parameters
                 const dataRows = parseGanttData(params);
@@ -112,20 +83,11 @@
                         criticalPathStyle: {
                             stroke: '#e64a19',
                             strokeWidth: 2
-                        },
-                        // Set a tooltip to show the status text
-                        tooltip: { 
-                            isHtml: true, 
-                            trigger: 'focus' 
-                        },
-                        // Custom task bar color based on the 'Color' column
-                        barHeight: 30
+                        }
                     }
                 };
 
                 const chart = new google.visualization.Gantt(document.getElementById('gantt_chart'));
-
-                // Draw the chart
                 chart.draw(data, options);
             } catch (error) {
                 document.getElementById('gantt_chart').innerHTML =
