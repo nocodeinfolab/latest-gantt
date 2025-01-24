@@ -18,30 +18,41 @@
             const labels = params.labels ? params.labels.split(',') : [];
             const startDates = params.startDates ? params.startDates.split(',') : [];
             const endDates = params.endDates ? params.endDates.split(',') : [];
+            const completionStatuses = params.completionStatuses ? params.completionStatuses.split(',') : [];
 
             // Ensure all parameters are provided and have equal lengths
-            if (!labels.length || labels.length !== startDates.length || labels.length !== endDates.length) {
-                throw new Error('Mismatched or missing labels, startDates, and endDates.');
+            if (!labels.length || labels.length !== startDates.length || labels.length !== endDates.length || labels.length !== completionStatuses.length) {
+                throw new Error('Mismatched or missing labels, startDates, endDates, or completionStatuses.');
             }
+
+            // Map completion statuses to percentages (for Gantt chart) and text
+            const statusToPercent = {
+                "Not Started": 0,
+                "In Progress": 50,
+                "Completed": 100
+            };
 
             // Create rows for the Gantt chart
             const dataRows = labels.map((label, index) => {
                 const startDate = new Date(startDates[index]);
                 const endDate = new Date(endDates[index]);
+                const completionStatus = completionStatuses[index].trim();
+                const percentComplete = statusToPercent[completionStatus] !== undefined ? statusToPercent[completionStatus] : 0;
 
                 if (isNaN(startDate) || isNaN(endDate)) {
                     throw new Error(`Invalid date format for task: ${label}`);
                 }
 
                 return [
-                    `Task${index + 1}`, // Task ID
-                    label.trim(),       // Task Name
-                    '',                 // Resource (Optional)
-                    startDate,          // Start Date
-                    endDate,            // End Date
-                    null,               // Duration (Auto-calculated)
-                    null,               // Percent Complete (Excluded for now)
-                    null                // Dependencies (Optional)
+                    `Task${index + 1}`,         // Task ID
+                    label.trim(),               // Task Name
+                    '',                         // Resource (Optional)
+                    startDate,                  // Start Date
+                    endDate,                    // End Date
+                    null,                       // Duration (Auto-calculated)
+                    percentComplete,            // Percent Complete (Mapped from status)
+                    null,                       // Dependencies (Optional)
+                    completionStatus            // Custom Status Column (Text)
                 ];
             });
 
@@ -52,9 +63,9 @@
             const params = getQueryParams();
 
             // Validate that required parameters are present
-            if (!params.labels || !params.startDates || !params.endDates) {
+            if (!params.labels || !params.startDates || !params.endDates || !params.completionStatuses) {
                 document.getElementById('gantt_chart').innerHTML =
-                    'Error: Missing required parameters (labels, startDates, endDates).';
+                    'Error: Missing required parameters (labels, startDates, endDates, completionStatuses).';
                 return;
             }
 
@@ -68,6 +79,7 @@
                 data.addColumn('number', 'Duration');
                 data.addColumn('number', 'Percent Complete');
                 data.addColumn('string', 'Dependencies');
+                data.addColumn('string', 'Status'); // Custom Status Column for displaying text
 
                 // Add rows parsed from query parameters
                 const dataRows = parseGanttData(params);
@@ -83,11 +95,18 @@
                         criticalPathStyle: {
                             stroke: '#e64a19',
                             strokeWidth: 2
+                        },
+                        // Set a tooltip to show the status text
+                        tooltip: { 
+                            isHtml: true, 
+                            trigger: 'focus' 
                         }
                     }
                 };
 
                 const chart = new google.visualization.Gantt(document.getElementById('gantt_chart'));
+
+                // Draw the chart
                 chart.draw(data, options);
             } catch (error) {
                 document.getElementById('gantt_chart').innerHTML =
